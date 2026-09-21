@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galaxia de Girasoles</title>
+<style>
+  :root{
+    --bg-1:#1a0a06;
+    --bg-2:#3a140a;
+    --bg-3:#0a0402;
+    --ring-1:#ff5a1f;
+    --ring-2:#ffb347;
+    --gold:#ffd66b;
+    --cream:#fff4e0;
+    --pink:#ff6b8b;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  html{ scroll-padding-top:env(safe-area-inset-top,0px); height:100%; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    height:100%;
+    min-height:100dvh;
+    background:
+      radial-gradient(ellipse at 50% 40%, var(--bg-2) 0%, var(--bg-1) 45%, var(--bg-3) 100%);
+    overflow:hidden;
+    font-family:'Georgia', 'Iowan Old Style', serif;
+    color:var(--cream);
+    position:relative;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* twinkling starfield */
+  #stars{ position:fixed; inset:0; z-index:0; pointer-events:none; }
+  .star{
+    position:absolute;
+    width:2px; height:2px;
+    background:#ffe9c7;
+    border-radius:50%;
+    opacity:.6;
+    animation:twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:.15; }
+    50%{ opacity:.9; }
+  }
+
+  #scene{
+    position:fixed; inset:0;
+    z-index:1;
+  }
+
+  /* floating word labels */
+  .word{
+    position:absolute;
+    white-space:nowrap;
+    font-weight:700;
+    letter-spacing:.01em;
+    color:var(--cream);
+    text-shadow:0 0 10px rgba(255,180,90,.55), 0 0 2px rgba(0,0,0,.6);
+    animation-name:drift;
+    animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;
+    animation-direction:alternate;
+    user-select:none;
+    pointer-events:none;
+  }
+  .word.big{ font-size:clamp(20px,4.2vw,34px); color:var(--gold); }
+  .word.mid{ font-size:clamp(13px,2.1vw,17px); }
+  .word.small{ font-size:clamp(10px,1.5vw,12px); opacity:.85; }
+  .word.heart{ color:var(--pink); }
+
+  @keyframes drift{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    100%{ transform:translate(var(--dx,10px), var(--dy,-14px)) rotate(var(--dr,2deg)); }
+  }
+
+  /* sunflower bouquets, drawn as SVG (no external images) */
+  .bouquet{
+    position:absolute;
+    width:var(--size,120px);
+    height:auto;
+    overflow:visible;
+    filter:drop-shadow(0 6px 16px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(255,170,40,.35));
+    animation-name:bob;
+    animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;
+    animation-direction:alternate;
+    user-select:none;
+    pointer-events:none;
+  }
+  @keyframes bob{
+    0%{ transform:translateY(0) rotate(-2deg); }
+    100%{ transform:translateY(-14px) rotate(2deg); }
+  }
+
+  /* central black hole / ringed planet, clickable */
+  #portal-wrap{
+    position:absolute;
+    left:50%; top:44%;
+    transform:translate(-50%,-50%);
+    z-index:3;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    cursor:pointer;
+    background:none;
+    border:none;
+    padding:0;
+  }
+  #portal{
+    position:relative;
+    width:min(30vw,150px);
+    height:min(30vw,150px);
+  }
+  #portal .core{
+    position:absolute;
+    inset:14%;
+    border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, #1c1c1c 0%, #000 65%, #000 100%);
+    box-shadow:
+      0 0 40px 10px rgba(255,90,20,.35),
+      inset 0 0 30px rgba(0,0,0,.9);
+    z-index:2;
+  }
+  #portal .ring{
+    position:absolute;
+    inset:-6%;
+    border-radius:50%;
+    background:
+      conic-gradient(from 0deg,
+        var(--ring-1), var(--ring-2), var(--ring-1),
+        transparent 55%, transparent 65%,
+        var(--ring-1), var(--ring-2), var(--ring-1));
+    -webkit-mask:radial-gradient(circle, transparent 58%, #000 62%, #000 78%, transparent 82%);
+            mask:radial-gradient(circle, transparent 58%, #000 62%, #000 78%, transparent 82%);
+    transform:rotate(-18deg) scaleY(.42);
+    animation:spin 10s linear infinite;
+    filter:drop-shadow(0 0 12px rgba(255,120,40,.6));
+    z-index:1;
+  }
+  @keyframes spin{
+    from{ transform:rotate(-18deg) scaleY(.42); }
+    to{ transform:rotate(342deg) scaleY(.42); }
+  }
+  #hint{
+    font-size:clamp(13px,2.4vw,16px);
+    color:var(--gold);
+    text-shadow:0 0 12px rgba(255,180,80,.8);
+    animation:pulse 1.8s ease-in-out infinite;
+    text-align:center;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:.55; }
+    50%{ opacity:1; }
+  }
+
+  /* zoom-in transition when the portal is opened */
+  #flash{
+    position:fixed; inset:0;
+    background:#000;
+    opacity:0;
+    pointer-events:none;
+    z-index:5;
+    transition:opacity .5s ease;
+  }
+  #flash.on{ opacity:1; }
+
+  /* love-letter modal */
+  #modal-wrap{
+    position:fixed; inset:0;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:rgba(0,0,0,.55);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .45s ease;
+  }
+  #modal-wrap.open{ opacity:1; visibility:visible; }
+  #modal{
+    max-width:420px;
+    width:100%;
+    background:linear-gradient(180deg,#170403,#0c0201);
+    border:1px solid var(--ring-1);
+    border-radius:14px;
+    padding:32px 28px;
+    text-align:center;
+    box-shadow:
+      0 0 18px rgba(255,90,20,.55),
+      0 0 60px rgba(255,90,20,.25);
+    transform:scale(.9);
+    transition:transform .45s cubic-bezier(.2,.9,.3,1.2);
+  }
+  #modal-wrap.open #modal{ transform:scale(1); }
+  #modal h2{
+    margin:0 0 18px;
+    font-family:'Brush Script MT','Segoe Script', cursive;
+    font-size:clamp(28px,6vw,36px);
+    color:var(--gold);
+    font-weight:400;
+  }
+  #modal p{
+    font-size:clamp(14px,2.6vw,16px);
+    line-height:1.7;
+    color:var(--cream);
+    margin:0 0 16px;
+    font-style:italic;
+  }
+  #modal .final{
+    color:var(--gold);
+    font-style:normal;
+    font-weight:700;
+  }
+  #close-btn{
+    margin-top:10px;
+    padding:8px 28px;
+    background:transparent;
+    border:1px solid var(--ring-1);
+    color:var(--ring-2);
+    border-radius:999px;
+    font-size:14px;
+    font-family:inherit;
+    letter-spacing:.03em;
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  #close-btn:hover{ background:var(--ring-1); color:#1a0a06; }
+
+  @media (prefers-reduced-motion:reduce){
+    .word,.bouquet,.star,#portal .ring,#hint{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs id="bouquet-defs">
+    <!-- filled in by JS with the sunflower bouquet artwork -->
+  </defs>
+</svg>
+
+<div id="stars"></div>
+<div id="scene">
+  <!-- words and bouquets are injected by JS -->
+</div>
+
+<button id="portal-wrap" aria-label="Entrar a la galaxia">
+  <div id="portal">
+    <div class="ring"></div>
+    <div class="core"></div>
+  </div>
+  <div id="hint">Haz clic para entrar a la galaxia ✨</div>
+</button>
+
+<div id="flash"></div>
+
+<div id="modal-wrap">
+  <div id="modal">
+    <h2>Mi Amor...</h2>
+    <p>Eres la coincidencia m&aacute;s hermosa que me pudo pasar.</p>
+    <p>As&iacute; como estas flores y estrellas iluminan la inmensidad, tu sonrisa ilumina cada uno de mis d&iacute;as.</p>
+    <p class="final">&iexcl;Feliz D&iacute;a de las Flores Amarillas, Mi Amor!<br>Te amo infinitamente.</p>
+    <button id="close-btn">Cerrar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const scene = document.getElementById('scene');
+  const starsWrap = document.getElementById('stars');
+
+  const words = [
+    "Mi destino","Mi sol","Mi amor","Mi Mundo Entero","Me Encantas","Mi Bonita",
+    "Preciosura","Sue\u00f1os","Mi Blanquita","Mi Reina","Te Extrañooo","Mi cielo",
+    "Pasi\u00f3n","Mi Felicidad","Bebe","Dulzura","Mi calma","Mi raz\u00f3n",
+    "Mi universo","Mi Princesa","Blanquita Hermosa","Amor De Mi Vda","Mi Todo","Mi luz",
+    "Mi paz","Mi Angel","Preciosa","Hermosa","Radiante","Divina","Infinito",
+    "Devoci\u00f3n","Ilusi\u00f3n","Complicidad","Fidelidad","Mi locura",
+    "Qu\u00edmica","Compa\u00f1era","Mi estrella","Mi princesa","Ternura pura",
+    "Mi hogar","Mi refugio","Gratitud","Mi milagro","Siempre t\u00fa"
+  ];
+
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+
+  // stars
+  for(let i=0;i<70;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.left = rand(0,100)+'vw';
+    s.style.top = rand(0,100)+'vh';
+    s.style.animationDelay = rand(0,3)+'s';
+    starsWrap.appendChild(s);
+  }
+
+  // scattered love words, avoiding dead center where the portal sits
+  const sizeClasses = ['big','mid','mid','small','small'];
+  words.forEach((w,i)=>{
+    const el = document.createElement('div');
+    el.className = 'word ' + sizeClasses[i % sizeClasses.length];
+    el.textContent = w;
+
+    let left, top;
+    do{
+      left = rand(2,90);
+      top = rand(4,88);
+    } while(Math.abs(left-50) < 16 && Math.abs(top-42) < 16);
+
+    el.style.left = left+'vw';
+    el.style.top = top+'vh';
+    el.style.setProperty('--dx', rand(-14,14)+'px');
+    el.style.setProperty('--dy', rand(-18,-6)+'px');
+    el.style.setProperty('--dr', rand(-4,4)+'deg');
+    el.style.animationDuration = rand(4,7)+'s';
+    el.style.animationDelay = rand(0,3)+'s';
+    scene.appendChild(el);
+  });
+
+  // a few floating hearts among the words
+  for(let i=0;i<6;i++){
+    const el = document.createElement('div');
+    el.className = 'word small heart';
+    el.textContent = '\u2764';
+    let left = rand(2,92), top = rand(4,90);
+    el.style.left = left+'vw';
+    el.style.top = top+'vh';
+    el.style.setProperty('--dx', rand(-10,10)+'px');
+    el.style.setProperty('--dy', rand(-14,-4)+'px');
+    el.style.animationDuration = rand(3,5)+'s';
+    el.style.animationDelay = rand(0,2)+'s';
+    scene.appendChild(el);
+  }
+
+  // ---- build a realistic sunflower-bouquet symbol, drawn as SVG paths ----
+  function buildSunflowerHead(cx, cy, r, outerPetals, rot){
+    let s = '';
+    const petalLen = r * 1.55;
+    const petalW = r * 0.62;
+    // outer petal ring
+    for(let i=0;i<outerPetals;i++){
+      const a = (360/outerPetals)*i + rot;
+      s += `<ellipse cx="${cx}" cy="${cy - r*0.35 - petalLen/2}" rx="${petalW/2}" ry="${petalLen/2}"
+        transform="rotate(${a} ${cx} ${cy})" fill="url(#petalGradOuter)" stroke="#c9760f" stroke-width="0.6"/>`;
+    }
+    // inner shorter petal ring, offset by half a step, brighter
+    const innerLen = petalLen * 0.62;
+    const innerW = petalW * 0.8;
+    for(let i=0;i<outerPetals;i++){
+      const a = (360/outerPetals)*i + rot + (360/outerPetals)/2;
+      s += `<ellipse cx="${cx}" cy="${cy - r*0.3 - innerLen/2}" rx="${innerW/2}" ry="${innerLen/2}"
+        transform="rotate(${a} ${cx} ${cy})" fill="url(#petalGradInner)"/>`;
+    }
+    // seeded center
+    s += `<circle cx="${cx}" cy="${cy}" r="${r*0.56}" fill="url(#centerGrad)"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r*0.56}" fill="url(#seedPattern)" opacity="0.9"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r*0.58}" fill="none" stroke="#5a3a17" stroke-width="${r*0.06}" opacity="0.5"/>`;
+    return s;
+  }
+
+  function buildLeaf(x,y,w,h,rot){
+    return `<path d="M${x},${y} C${x-w},${y-h*0.5} ${x-w*0.6},${y-h} ${x},${y-h*1.15}
+      C${x+w*0.6},${y-h} ${x+w},${y-h*0.5} ${x},${y} Z"
+      fill="url(#leafGrad)" stroke="#33501f" stroke-width="1"
+      transform="rotate(${rot} ${x} ${y})"/>`;
+  }
+
+  function buildBouquetDefs(){
+    const defs = document.getElementById('bouquet-defs');
+    let s = '';
+
+    // gradients & patterns, defined once
+    s += `
+      <linearGradient id="petalGradOuter" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#ff9d17"/>
+        <stop offset="100%" stop-color="#ffd75e"/>
+      </linearGradient>
+      <linearGradient id="petalGradInner" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#ffb631"/>
+        <stop offset="100%" stop-color="#ffe98c"/>
+      </linearGradient>
+      <radialGradient id="centerGrad" cx="38%" cy="35%" r="70%">
+        <stop offset="0%" stop-color="#7a4d1f"/>
+        <stop offset="70%" stop-color="#4a2f13"/>
+        <stop offset="100%" stop-color="#2e1c0b"/>
+      </radialGradient>
+      <linearGradient id="leafGrad" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#3c6b1f"/>
+        <stop offset="100%" stop-color="#6fa832"/>
+      </linearGradient>
+      <linearGradient id="stemGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5c8a2e"/>
+        <stop offset="100%" stop-color="#3c6b1f"/>
+      </linearGradient>
+      <linearGradient id="paperGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#e9cd9c"/>
+        <stop offset="55%" stop-color="#d3ab73"/>
+        <stop offset="100%" stop-color="#b3854e"/>
+      </linearGradient>
+      <linearGradient id="ribbonGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff1c2"/>
+        <stop offset="100%" stop-color="#e8b84b"/>
+      </linearGradient>
+      <pattern id="seedPattern" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
+        <circle cx="2" cy="2" r="1" fill="#2e1c0b" opacity="0.55"/>
+        <circle cx="5.5" cy="5.5" r="1" fill="#2e1c0b" opacity="0.4"/>
+      </pattern>`;
+
+    // the bouquet symbol itself
+    let body = '';
+    // stems converging toward the wrap
+    body += `<path d="M100,205 C96,175 90,150 62,118" stroke="url(#stemGrad)" stroke-width="4" fill="none"/>`;
+    body += `<path d="M100,205 C102,170 104,140 100,108" stroke="url(#stemGrad)" stroke-width="4.5" fill="none"/>`;
+    body += `<path d="M100,205 C104,175 112,150 140,118" stroke="url(#stemGrad)" stroke-width="4" fill="none"/>`;
+    body += `<path d="M100,205 C98,182 92,168 74,150" stroke="url(#stemGrad)" stroke-width="3.5" fill="none"/>`;
+    body += `<path d="M100,205 C103,182 110,168 128,150" stroke="url(#stemGrad)" stroke-width="3.5" fill="none"/>`;
+
+    // leaves along stems
+    body += buildLeaf(88,178,16,26,-30);
+    body += buildLeaf(114,180,16,26,28);
+    body += buildLeaf(100,160,14,22,4);
+
+    // paper wrap (kraft cone)
+    body += `<path d="M100,200 L44,225 L70,292 L130,292 L156,225 Z" fill="url(#paperGrad)" stroke="#8c6636" stroke-width="1.5"/>`;
+    body += `<path d="M100,200 L82,292" stroke="#a9824f" stroke-width="1.2" opacity="0.6"/>`;
+    body += `<path d="M100,200 L118,292" stroke="#a9824f" stroke-width="1.2" opacity="0.6"/>`;
+    body += `<path d="M100,200 L100,292" stroke="#a9824f" stroke-width="1.2" opacity="0.6"/>`;
+
+    // ribbon bow tied at the neck
+    body += `<path d="M100,204 C82,190 68,192 66,204 C64,216 82,216 100,206 Z" fill="url(#ribbonGrad)" stroke="#b3872c" stroke-width="1"/>`;
+    body += `<path d="M100,204 C118,190 132,192 134,204 C136,216 118,216 100,206 Z" fill="url(#ribbonGrad)" stroke="#b3872c" stroke-width="1"/>`;
+    body += `<rect x="94" y="199" width="12" height="12" rx="3" fill="#e8b84b" stroke="#b3872c" stroke-width="1"/>`;
+    body += `<path d="M96,210 L86,236 L94,234 Z" fill="url(#ribbonGrad)"/>`;
+    body += `<path d="M104,210 L114,236 L106,234 Z" fill="url(#ribbonGrad)"/>`;
+
+    // flower heads (five, layered for a full cluster look)
+    body += buildSunflowerHead(64, 60, 26, 13, 4);
+    body += buildSunflowerHead(138, 58, 27, 13, 10);
+    body += buildSunflowerHead(75, 100, 24, 12, 18);
+    body += buildSunflowerHead(128, 100, 24, 12, -8);
+    body += buildSunflowerHead(101, 66, 36, 15, 0);
+
+    s += `<symbol id="bouquet-symbol" viewBox="0 0 200 300">${body}</symbol>`;
+    defs.innerHTML = s;
+  }
+  buildBouquetDefs();
+
+  // sunflower bouquets scattered around the scene, avoiding the central portal
+  const bouquetSpots = [
+    {l:4,  t:8,  s:150, r:-6},  {l:78, t:4,  s:130, r:5},
+    {l:2,  t:56, s:140, r:4},   {l:84, t:52, s:150, r:-4},
+    {l:40, t:76, s:130, r:2},   {l:8,  t:34, s:100, r:-8},
+    {l:90, t:26, s:105, r:7},   {l:58, t:6,  s:95,  r:-3},
+    {l:20, t:82, s:110, r:5},   {l:70, t:82, s:100, r:-5},
+    {l:-2, t:80, s:120, r:3},   {l:95, t:74, s:115, r:-6},
+    {l:32, t:2,  s:90,  r:4},   {l:12, t:8,  s:80,  r:-10}
+  ];
+  bouquetSpots.forEach((spot)=>{
+    const el = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    el.setAttribute('class','bouquet');
+    el.setAttribute('viewBox','0 0 200 300');
+    const use = document.createElementNS('http://www.w3.org/2000/svg','use');
+    use.setAttribute('href','#bouquet-symbol');
+    el.appendChild(use);
+    el.style.left = spot.l+'vw';
+    el.style.top = spot.t+'vh';
+    el.style.setProperty('--size', spot.s+'px');
+    el.style.animationDuration = rand(4,6.5)+'s';
+    el.style.animationDelay = rand(0,2.5)+'s';
+    el.style.transform = `rotate(${spot.r}deg)`;
+    scene.appendChild(el);
+  });
+
+  // portal interaction
+  const portalWrap = document.getElementById('portal-wrap');
+  const flash = document.getElementById('flash');
+  const modalWrap = document.getElementById('modal-wrap');
+  const closeBtn = document.getElementById('close-btn');
+
+  portalWrap.addEventListener('click', ()=>{
+    flash.classList.add('on');
+    setTimeout(()=>{
+      modalWrap.classList.add('open');
+      setTimeout(()=> flash.classList.remove('on'), 400);
+    }, 480);
+  });
+
+  closeBtn.addEventListener('click', ()=>{
+    modalWrap.classList.remove('open');
+  });
+  modalWrap.addEventListener('click', (e)=>{
+    if(e.target === modalWrap){ modalWrap.classList.remove('open'); }
+  });
+})();
+</script>
+
+</body>
+</html>
